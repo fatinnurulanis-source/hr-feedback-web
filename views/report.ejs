@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>Feedback Report</title>
+
+  <link rel="stylesheet" href="/css/style.css">
+
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+  >
+</head>
+
+<body>
+  <aside class="sidebar">
+    <div class="brand">
+      <h2>HR Feedback</h2>
+      <p>Management System</p>
+    </div>
+
+    <nav>
+      <a href="/dashboard">
+        <i class="bi bi-grid"></i>
+        Dashboard
+      </a>
+
+      <a href="/feedback">
+        <i class="bi bi-chat-left-text"></i>
+        Manage Feedback
+      </a>
+
+      <a href="/report" class="active">
+        <i class="bi bi-bar-chart"></i>
+        Report
+      </a>
+    </nav>
+  </aside>
+
+  <main class="main-content">
+    <header class="top-header">
+      <div>
+        <h1>Feedback Report</h1>
+
+        <p>
+          View feedback statistics and distributions.
+        </p>
+      </div>
+
+      <div class="user-box">
+        <span>
+          <i class="bi bi-person-circle"></i>
+
+          <%= currentUser?.displayName || "HR Administrator" %>
+        </span>
+
+        <a href="/logout" class="logout-button">
+          <i class="bi bi-box-arrow-right"></i>
+          Logout
+        </a>
+      </div>
+    </header>
+
+    <section class="summary-grid">
+      <a
+        href="/feedback?status=All"
+        class="summary-card summary-link"
+      >
+        <div class="summary-card-header">
+          <div>
+            <p class="summary-label">
+              Total Feedback
+            </p>
+
+            <h2><%= totalFeedback %></h2>
+          </div>
+
+          <div class="summary-icon">
+            <i class="bi bi-list-task"></i>
+          </div>
+        </div>
+
+        <span class="summary-action">
+          View all feedback
+          <i class="bi bi-arrow-right"></i>
+        </span>
+      </a>
+
+      <a
+        href="/feedback?status=Pending"
+        class="summary-card summary-link"
+      >
+        <div class="summary-card-header">
+          <div>
+            <p class="summary-label">
+              Pending
+            </p>
+
+            <h2><%= pendingFeedback %></h2>
+          </div>
+
+          <div class="summary-icon">
+            <i class="bi bi-hourglass-split"></i>
+          </div>
+        </div>
+
+        <span class="summary-action">
+          View pending feedback
+          <i class="bi bi-arrow-right"></i>
+        </span>
+      </a>
+
+      <a
+        href="/feedback?status=In%20Progress"
+        class="summary-card summary-link"
+      >
+        <div class="summary-card-header">
+          <div>
+            <p class="summary-label">
+              In Progress
+            </p>
+
+            <h2><%= inProgressFeedback %></h2>
+          </div>
+
+          <div class="summary-icon">
+            <i class="bi bi-arrow-repeat"></i>
+          </div>
+        </div>
+
+        <span class="summary-action">
+          View ongoing feedback
+          <i class="bi bi-arrow-right"></i>
+        </span>
+      </a>
+
+      <a
+        href="/feedback?status=Resolved"
+        class="summary-card summary-link"
+      >
+        <div class="summary-card-header">
+          <div>
+            <p class="summary-label">
+              Resolved
+            </p>
+
+            <h2><%= resolvedFeedback %></h2>
+          </div>
+
+          <div class="summary-icon">
+            <i class="bi bi-check-circle"></i>
+          </div>
+        </div>
+
+        <span class="summary-action">
+          View resolved feedback
+          <i class="bi bi-arrow-right"></i>
+        </span>
+      </a>
+    </section>
+
+    <section class="report-grid">
+      <div class="report-panel">
+        <div class="report-heading">
+          <h2>
+            <i class="bi bi-pie-chart"></i>
+            Status Distribution
+          </h2>
+
+          <p>
+            Feedback grouped by current status.
+          </p>
+        </div>
+
+        <div class="chart-container">
+          <canvas id="statusChart"></canvas>
+        </div>
+      </div>
+
+      <div class="report-panel">
+        <div class="report-heading">
+          <h2>
+            <i class="bi bi-bar-chart"></i>
+            Feedback by Category
+          </h2>
+
+          <p>
+            Number of submissions for each category.
+          </p>
+        </div>
+
+        <div class="chart-container">
+          <canvas id="categoryChart"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <section class="table-card report-table">
+      <div class="section-heading">
+        <div>
+          <h2>
+            <i class="bi bi-table"></i>
+            Report Summary
+          </h2>
+
+          <p>
+            Current feedback statistics from Firebase.
+          </p>
+        </div>
+      </div>
+
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Measurement</th>
+              <th>Total</th>
+              <th>Percentage</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr>
+              <td>
+                <span class="status pending">
+                  Pending
+                </span>
+              </td>
+
+              <td><%= pendingFeedback %></td>
+
+              <td><%= pendingPercentage %>%</td>
+            </tr>
+
+            <tr>
+              <td>
+                <span class="status in-progress">
+                  In Progress
+                </span>
+              </td>
+
+              <td><%= inProgressFeedback %></td>
+
+              <td><%= inProgressPercentage %>%</td>
+            </tr>
+
+            <tr>
+              <td>
+                <span class="status resolved">
+                  Resolved
+                </span>
+              </td>
+
+              <td><%= resolvedFeedback %></td>
+
+              <td><%= resolvedPercentage %>%</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <footer class="system-footer">
+      <p>
+        HR Feedback System © 2026
+      </p>
+
+      <p>
+        Developed by Fatin Nurul Anis
+      </p>
+    </footer>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <script type="application/json" id="report-data">
+    <%- JSON.stringify({
+      pending: pendingFeedback,
+      inProgress: inProgressFeedback,
+      resolved: resolvedFeedback,
+      categoryLabels: categoryLabels,
+      categoryValues: categoryValues
+    }) %>
+  </script>
+
+  <script>
+    const reportDataElement =
+      document.getElementById("report-data");
+
+    const reportData = JSON.parse(
+      reportDataElement.textContent
+    );
+
+    const statusCanvas =
+      document.getElementById("statusChart");
+
+    new Chart(statusCanvas, {
+      type: "doughnut",
+
+      data: {
+        labels: [
+          "Pending",
+          "In Progress",
+          "Resolved"
+        ],
+
+        datasets: [
+          {
+            data: [
+              reportData.pending,
+              reportData.inProgress,
+              reportData.resolved
+            ],
+
+            backgroundColor: [
+              "#f4c95d",
+              "#6ca6e8",
+              "#72c48d"
+            ],
+
+            borderWidth: 0
+          }
+        ]
+      },
+
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+
+        cutout: "62%",
+
+        plugins: {
+          legend: {
+            position: "bottom"
+          }
+        }
+      }
+    });
+
+    const categoryCanvas =
+      document.getElementById("categoryChart");
+
+    new Chart(categoryCanvas, {
+      type: "bar",
+
+      data: {
+        labels: reportData.categoryLabels,
+
+        datasets: [
+          {
+            label: "Feedback",
+            data: reportData.categoryValues,
+            backgroundColor: "#3d3b8e",
+            borderRadius: 6
+          }
+        ]
+      },
+
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+
+        scales: {
+          y: {
+            beginAtZero: true,
+
+            ticks: {
+              precision: 0
+            }
+          }
+        },
+
+        plugins: {
+          legend: {
+            display: false
+          }
+        }
+      }
+    });
+  </script>
+</body>
+</html>
