@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>
+    Feedback Details | HR Feedback Portal
+  </title>
+
+  <link rel="stylesheet" href="/css/style.css">
+
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+  >
+  <link
+  rel="icon"
+  type="image/jpeg"
+  href="/images/metropolitan-logo.jpg"
+>
+</head>
+
+<body>
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-logo-box">
+        <img
+          src="/images/metropolitan-logo.jpg"
+          alt="Metropolitan College Logo"
+          class="sidebar-logo"
+        >
+      </div>
+
+      <div class="brand-text">
+        <h2>HR Feedback Portal</h2>
+        <p>HR Feedback Management System</p>
+      </div>
+    </div>
+
+    <nav>
+      <a href="/dashboard">
+        <i class="bi bi-grid"></i>
+        Dashboard
+      </a>
+
+      <a href="/feedback">
+        <i class="bi bi-chat-left-text"></i>
+        Manage Feedback
+      </a>
+
+      <a href="/report" class="active">
+        <i class="bi bi-bar-chart"></i>
+        Report
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <p>Version 1.0.0</p>
+      <span>© 2026 HR Feedback Portal</span>
+    </div>
+  </aside>
+
+  <main class="main-content">
+    <header class="top-header">
+      <div>
+        <a href="/report" class="back-link">
+          <i class="bi bi-arrow-left"></i>
+          Back to Report
+        </a>
+
+        <h1>Feedback Details</h1>
+
+        <p>
+          View the complete information for this feedback record.
+        </p>
+      </div>
+
+      <div class="user-box">
+        <span>
+          <i class="bi bi-person-circle"></i>
+
+          <%= currentUser?.displayName || "HR Administrator" %>
+        </span>
+
+        <a href="/logout" class="logout-button">
+          <i class="bi bi-box-arrow-right"></i>
+          Logout
+        </a>
+      </div>
+    </header>
+
+    <% const statusClass =
+      String(feedback.status || "Pending")
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, "-");
+    %>
+
+    <section class="feedback-detail-card">
+      <div class="feedback-detail-header">
+        <div>
+          <p class="feedback-detail-label">
+            Feedback Record
+          </p>
+
+          <h2>
+            <%= feedback.title || "-" %>
+          </h2>
+
+          <p class="feedback-category">
+            <i class="bi bi-tag"></i>
+
+            <%= feedback.category || "Uncategorized" %>
+          </p>
+        </div>
+
+        <span class="status <%= statusClass %>">
+          <%= feedback.status || "Pending" %>
+        </span>
+      </div>
+
+      <div class="feedback-detail-grid">
+        <div class="feedback-detail-item">
+          <span class="detail-icon">
+            <i class="bi bi-person"></i>
+          </span>
+
+          <div>
+            <p class="detail-label">
+              Submitted By
+            </p>
+
+            <strong>
+              <% if (feedback.is_anonymous === true) { %>
+                Anonymous
+              <% } else { %>
+                <%= feedback.submitted_by || "-" %>
+              <% } %>
+            </strong>
+          </div>
+        </div>
+
+        <div class="feedback-detail-item">
+          <span class="detail-icon">
+            <i class="bi bi-calendar-event"></i>
+          </span>
+
+          <div>
+            <p class="detail-label">
+              Submitted Date
+            </p>
+
+            <strong>
+              <%
+                const submittedDate =
+                  feedback.created_time ||
+                  feedback.timestamp ||
+                  feedback.created_at;
+
+                let formattedDate = "-";
+
+                if (submittedDate) {
+                  let date;
+
+                  if (
+                    typeof submittedDate.toDate ===
+                    "function"
+                  ) {
+                    date = submittedDate.toDate();
+                  } else if (submittedDate._seconds) {
+                    date = new Date(
+                      submittedDate._seconds * 1000
+                    );
+                  } else {
+                    date = new Date(submittedDate);
+                  }
+
+                  if (!Number.isNaN(date.getTime())) {
+                    formattedDate =
+                      date.toLocaleString(
+                        "en-MY",
+                        {
+                          dateStyle: "medium",
+                          timeStyle: "short"
+                        }
+                      );
+                  }
+                }
+              %>
+
+              <%= formattedDate %>
+            </strong>
+          </div>
+        </div>
+
+        <div class="feedback-detail-item">
+          <span class="detail-icon">
+            <i class="bi bi-tag"></i>
+          </span>
+
+          <div>
+            <p class="detail-label">
+              Category
+            </p>
+
+            <strong>
+              <%= feedback.category || "Uncategorized" %>
+            </strong>
+          </div>
+        </div>
+
+        <div class="feedback-detail-item">
+          <span class="detail-icon">
+            <i class="bi bi-flag"></i>
+          </span>
+
+          <div>
+            <p class="detail-label">
+              Current Status
+            </p>
+
+            <strong>
+              <%= feedback.status || "Pending" %>
+            </strong>
+          </div>
+        </div>
+      </div>
+
+      <div class="feedback-detail-section">
+        <h3>
+          <i class="bi bi-chat-left-text"></i>
+          Feedback Description
+        </h3>
+
+        <p>
+          <%= feedback.message ||
+              feedback.description ||
+              "No description provided." %>
+        </p>
+      </div>
+
+      <div class="feedback-detail-section">
+        <h3>
+          <i class="bi bi-reply"></i>
+          HR Response
+        </h3>
+
+        <p>
+          <%= feedback.hr_response ||
+              "No response has been provided by HR." %>
+        </p>
+      </div>
+
+      <div class="feedback-detail-actions">
+        <a href="/report" class="reset-button">
+          <i class="bi bi-arrow-left"></i>
+          Back to Report
+        </a>
+
+        <a
+          href="/feedback?search=<%= encodeURIComponent(
+            feedback.title || ""
+          ) %>"
+          class="filter-button"
+        >
+          <i class="bi bi-pencil-square"></i>
+          Manage Feedback
+        </a>
+      </div>
+    </section>
+
+    <footer class="system-footer">
+      <p>HR Feedback Portal © 2026</p>
+      <p>Developed by Fatin Nurul Anis</p>
+    </footer>
+  </main>
+</body>
+</html>

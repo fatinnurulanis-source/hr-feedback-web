@@ -8,48 +8,139 @@
     content="width=device-width, initial-scale=1.0"
   >
 
-  <title>HR Login</title>
+  <title>Login | HR Feedback Portal</title>
 
   <link rel="stylesheet" href="/css/style.css">
+
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
+  >
+  <link
+  rel="icon"
+  type="image/jpeg"
+  href="/images/metropolitan-logo.jpg"
+>
 </head>
 
 <body class="login-page">
-  <main class="login-container">
-    <section class="login-card">
-      <div class="login-brand">
-        <h1>HR Feedback System</h1>
-        <p>Sign in to access the HR web portal.</p>
+  <main class="login-split-layout">
+    <section class="login-brand-panel">
+      <div class="login-brand-content">
+        <div class="login-brand-logo-box">
+          <img
+            src="/images/metropolitan-logo.jpg"
+            alt="Metropolitan College Logo"
+            class="login-brand-logo"
+          >
+        </div>
+
+        <p class="login-brand-label">
+          Metropolitan College
+        </p>
+
+        <h1>HR Feedback Portal</h1>
+
+        <p class="login-brand-tagline">
+          HR Feedback Management System
+        </p>
+
+        <p class="login-brand-description">
+          A centralized portal for HR administrators to review,
+          manage and respond to employee feedback.
+        </p>
+
+        <div class="login-feature-list">
+          <div class="login-feature-item">
+            <i class="bi bi-chat-left-text"></i>
+            <span>Manage employee feedback</span>
+          </div>
+
+          <div class="login-feature-item">
+            <i class="bi bi-bar-chart"></i>
+            <span>Monitor reports and statistics</span>
+          </div>
+
+          <div class="login-feature-item">
+            <i class="bi bi-shield-check"></i>
+            <span>Secure HR administrator access</span>
+          </div>
+        </div>
       </div>
 
-      <form id="login-form" class="login-form">
-        <label for="email">Email Address</label>
+      <div class="login-brand-footer">
+        <span>Version 1.0.0</span>
+        <span>© 2026 Metropolitan College</span>
+      </div>
+    </section>
 
-        <input
-          type="email"
-          id="email"
-          placeholder="Enter HR email"
-          required
-        >
+    <section class="login-form-panel">
+      <div class="login-form-card">
+        <div class="login-form-header">
+          <span class="login-form-icon">
+            <i class="bi bi-person-lock"></i>
+          </span>
 
-        <label for="password">Password</label>
+          <h2>Welcome Back</h2>
 
-        <input
-          type="password"
-          id="password"
-          placeholder="Enter password"
-          required
-        >
+          <p>
+            Sign in using your HR administrator account.
+          </p>
+        </div>
 
-        <button type="submit" id="login-button">
-          Sign In
-        </button>
+        <form id="login-form" class="login-form">
+          <label for="email">
+            Email Address
+          </label>
 
-        <p
-          id="login-error"
-          class="form-error"
-          aria-live="polite"
-        ></p>
-      </form>
+          <div class="login-input-wrapper">
+            <i class="bi bi-envelope"></i>
+
+            <input
+              type="email"
+              id="email"
+              placeholder="Enter HR email"
+              autocomplete="email"
+              required
+            >
+          </div>
+
+          <label for="password">
+            Password
+          </label>
+
+          <div class="login-input-wrapper">
+            <i class="bi bi-lock"></i>
+
+            <input
+              type="password"
+              id="password"
+              placeholder="Enter password"
+              autocomplete="current-password"
+              required
+            >
+          </div>
+
+          <button type="submit" id="login-button">
+            <i class="bi bi-box-arrow-in-right"></i>
+            Sign In
+          </button>
+
+          <p
+            id="login-error"
+            class="form-error"
+            aria-live="polite"
+          ></p>
+        </form>
+
+        <div class="login-security-note">
+          <i class="bi bi-shield-lock"></i>
+
+          <p>
+            Access is restricted to authorized HR administrators only.
+          </p>
+        </div>
+      </div>
     </section>
   </main>
 
@@ -63,16 +154,15 @@
       signInWithEmailAndPassword
     } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
 
-   // For Firebase JS SDK v7.20.0 and later, measurementId is optional
-const firebaseConfig = {
-  apiKey: "AIzaSyAzX621V6O8lK4U9VYNN2GIG7RkekwIp0w",
-  authDomain: "hr-feedback-system-8edc5.firebaseapp.com",
-  projectId: "hr-feedback-system-8edc5",
-  storageBucket: "hr-feedback-system-8edc5.firebasestorage.app",
-  messagingSenderId: "849257547861",
-  appId: "1:849257547861:web:ce0f4d80d3c48ecc1eecdc",
-  measurementId: "G-J1J2LWN1E7"
-};
+    const firebaseConfig = {
+      apiKey: "AIzaSyAzX621V6O8lK4U9VYNN2GIG7RkekwIp0w",
+      authDomain: "hr-feedback-system-8edc5.firebaseapp.com",
+      projectId: "hr-feedback-system-8edc5",
+      storageBucket: "hr-feedback-system-8edc5.firebasestorage.app",
+      messagingSenderId: "849257547861",
+      appId: "1:849257547861:web:ce0f4d80d3c48ecc1eecdc",
+      measurementId: "G-J1J2LWN1E7"
+    };
 
     const firebaseApp = initializeApp(firebaseConfig);
     const firebaseAuth = getAuth(firebaseApp);
@@ -93,7 +183,8 @@ const firebaseConfig = {
 
         loginError.textContent = "";
         loginButton.disabled = true;
-        loginButton.textContent = "Signing In...";
+        loginButton.innerHTML =
+          '<span class="login-spinner"></span> Signing In...';
 
         const email =
           document.getElementById("email").value.trim();
@@ -142,7 +233,8 @@ const firebaseConfig = {
             "Invalid email or password.";
 
           loginButton.disabled = false;
-          loginButton.textContent = "Sign In";
+          loginButton.innerHTML =
+            '<i class="bi bi-box-arrow-in-right"></i> Sign In';
         }
       }
     );

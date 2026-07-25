@@ -3,6 +3,7 @@ require("dotenv").config();
 const express = require("express");
 const path = require("path");
 const session = require("express-session");
+const PDFDocument = require("pdfkit");
 const { db, auth } = require("./config/firebase");
 
 const app = express();
@@ -20,11 +21,13 @@ app.use(express.static(path.join(__dirname, "public")));
 // Session
 app.use(
   session({
-   secret:
-process.env.SESSION_SECRET ||
-"local-development-secret",
+    secret:
+      process.env.SESSION_SECRET ||
+      "local-development-secret",
+
     resave: false,
     saveUninitialized: false,
+
     cookie: {
       httpOnly: true,
       maxAge: 1000 * 60 * 60 * 2,
@@ -32,19 +35,65 @@ process.env.SESSION_SECRET ||
   })
 );
 
-// Middleware untuk protect HR pages
+// Protect HR pages
 function requireHR(req, res, next) {
   if (!req.session.user) {
     return res.redirect("/login");
   }
 
   if (
-    String(req.session.user.role || "").toLowerCase() !== "hr"
+    String(req.session.user.role || "")
+      .trim()
+      .toLowerCase() !== "hr"
   ) {
-    return res.status(403).send("Access denied.");
+    return res
+      .status(403)
+      .send("Access denied.");
   }
 
   next();
+}
+
+// Normalize feedback status
+function normalizeStatus(status) {
+  return String(status || "")
+    .trim()
+    .toLowerCase();
+}
+
+// Return employee name or Anonymous
+function getSubmittedBy(feedback) {
+  if (feedback.is_anonymous === true) {
+    return "Anonymous";
+  }
+
+  return feedback.submitted_by || "-";
+}
+
+// Convert Firestore timestamp to readable date
+function formatDate(value) {
+  if (!value) {
+    return "-";
+  }
+
+  let date;
+
+  if (typeof value.toDate === "function") {
+    date = value.toDate();
+  } else if (value._seconds) {
+    date = new Date(value._seconds * 1000);
+  } else {
+    date = new Date(value);
+  }
+
+  if (Number.isNaN(date.getTime())) {
+    return "-";
+  }
+
+  return date.toLocaleString("en-MY", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
 }
 
 // Root page
@@ -53,7 +102,7 @@ app.get("/", (req, res) => {
     return res.redirect("/dashboard");
   }
 
-  res.redirect("/login");
+  return res.redirect("/login");
 });
 
 // Login page
@@ -62,19 +111,20 @@ app.get("/login", (req, res) => {
     return res.redirect("/dashboard");
   }
 
-  res.render("login", {
+  return res.render("login", {
     errorMessage: "",
   });
 });
 
-// Verify Firebase login token dan create session
+// Verify Firebase login token and create session
 app.post("/auth/session", async (req, res) => {
   try {
     const idToken = req.body.idToken;
 
     if (!idToken) {
       return res.status(400).json({
-        message: "Authentication token is required.",
+        message:
+          "Authentication token is required.",
       });
     }
 
@@ -112,13 +162,14 @@ app.post("/auth/session", async (req, res) => {
       uid,
       email: decodedToken.email || "",
       role: userRole,
+
       displayName:
         userData.display_name ||
         userData.displayName ||
         "HR Administrator",
     };
 
-    res.json({
+    return res.json({
       success: true,
       message: "Login successful.",
     });
@@ -128,7 +179,7 @@ app.post("/auth/session", async (req, res) => {
       error
     );
 
-    res.status(401).json({
+    return res.status(401).json({
       message:
         "Login failed. Please check your email and password.",
     });
@@ -157,34 +208,89 @@ app.get(
       const pendingFeedback =
         feedbackList.filter(
           (feedback) =>
-            String(feedback.status || "")
-              .trim()
-              .toLowerCase() === "pending"
+            normalizeStatus(
+              feedback.status
+            ) === "pending"
         ).length;
 
       const inProgressFeedback =
         feedbackList.filter(
           (feedback) =>
-            String(feedback.status || "")
-              .trim()
-              .toLowerCase() ===
-            "in progress"
+            normalizeStatus(
+              feedback.status
+            ) === "in progress"
         ).length;
 
       const resolvedFeedback =
         feedbackList.filter(
           (feedback) =>
-            String(feedback.status || "")
-              .trim()
-              .toLowerCase() === "resolved"
+            normalizeStatus(
+              feedback.status
+            ) === "resolved"
         ).length;
 
-      res.render("dashboard", {
+      const categoryCount = {};
+
+      feedbackList.forEach((feedback) => {
+        const category =
+          String(
+            feedback.category ||
+              "Uncategorized"
+          ).trim() || "Uncategorized";
+
+        categoryCount[category] =
+          (categoryCount[category] || 0) + 1;
+      });
+
+      const categoryLabels =
+        Object.keys(categoryCount);
+
+      const categoryValues =
+        Object.values(categoryCount);
+
+      const getCreatedTime = (feedback) => {
+        const value =
+          feedback.created_time ||
+          feedback.timestamp ||
+          feedback.created_at;
+
+        if (!value) {
+          return 0;
+        }
+
+        if (
+          typeof value.toMillis ===
+          "function"
+        ) {
+          return value.toMillis();
+        }
+
+        if (value._seconds) {
+          return value._seconds * 1000;
+        }
+
+        const parsedDate =
+          new Date(value).getTime();
+
+        return Number.isNaN(parsedDate)
+          ? 0
+          : parsedDate;
+      };
+
+      feedbackList.sort(
+        (a, b) =>
+          getCreatedTime(b) -
+          getCreatedTime(a)
+      );
+
+      return res.render("dashboard", {
         feedbackList,
         totalFeedback,
         pendingFeedback,
         inProgressFeedback,
         resolvedFeedback,
+        categoryLabels,
+        categoryValues,
         currentUser: req.session.user,
       });
     } catch (error) {
@@ -193,7 +299,7 @@ app.get(
         error
       );
 
-      res.status(500).send(
+      return res.status(500).send(
         "Unable to load HR dashboard."
       );
     }
@@ -227,55 +333,65 @@ app.get(
       ).trim();
 
       if (search) {
-        feedbackList = feedbackList.filter(
-          (feedback) => {
-            const title = String(
-              feedback.title || ""
-            ).toLowerCase();
+        feedbackList =
+          feedbackList.filter(
+            (feedback) => {
+              const title = String(
+                feedback.title || ""
+              ).toLowerCase();
 
-            const category = String(
-              feedback.category || ""
-            ).toLowerCase();
+              const category = String(
+                feedback.category || ""
+              ).toLowerCase();
 
-            const submittedBy = String(
-              feedback.submitted_by || ""
-            ).toLowerCase();
+              const submittedBy = String(
+                feedback.submitted_by || ""
+              ).toLowerCase();
 
-            const message = String(
-              feedback.message || ""
-            ).toLowerCase();
+              const message = String(
+                feedback.message ||
+                  feedback.description ||
+                  ""
+              ).toLowerCase();
 
-            return (
-              title.includes(search) ||
-              category.includes(search) ||
-              submittedBy.includes(search) ||
-              message.includes(search)
-            );
-          }
-        );
+              return (
+                title.includes(search) ||
+                category.includes(search) ||
+                submittedBy.includes(search) ||
+                message.includes(search)
+              );
+            }
+          );
       }
 
       if (
         statusFilter &&
         statusFilter.toLowerCase() !== "all"
       ) {
-        feedbackList = feedbackList.filter(
-          (feedback) =>
-            String(feedback.status || "")
-              .trim()
-              .toLowerCase() ===
-            statusFilter.toLowerCase()
-        );
+        feedbackList =
+          feedbackList.filter(
+            (feedback) =>
+              normalizeStatus(
+                feedback.status
+              ) ===
+              statusFilter.toLowerCase()
+          );
       }
 
-      res.render("feedback", {
+      return res.render("feedback", {
         feedbackList,
+
         successMessage:
           req.query.success || "",
+
         errorMessage:
           req.query.error || "",
+
         currentUser: req.session.user,
-        searchValue: req.query.search || "",
+
+        searchValue:
+          req.query.search || "",
+
         selectedStatus: statusFilter,
       });
     } catch (error) {
@@ -284,20 +400,21 @@ app.get(
         error
       );
 
-      res.status(500).send(
+      return res.status(500).send(
         "Unable to load Manage Feedback page."
       );
     }
   }
 );
 
-// Update feedback status dan HR response
+// Update feedback and create notification
 app.post(
   "/feedback/:id/update",
   requireHR,
   async (req, res) => {
     try {
-      const feedbackId = req.params.id;
+      const feedbackId =
+        req.params.id;
 
       const status = String(
         req.body.status || ""
@@ -313,7 +430,9 @@ app.post(
         "Resolved",
       ];
 
-      if (!allowedStatuses.includes(status)) {
+      if (
+        !allowedStatuses.includes(status)
+      ) {
         return res.redirect(
           "/feedback?error=" +
             encodeURIComponent(
@@ -350,19 +469,26 @@ app.post(
       await db
         .collection("notifications")
         .add({
-          title: "Feedback Status Updated",
+          title:
+            "Feedback Status Updated",
+
           message:
-            `Your feedback "${feedbackData.title || "Feedback"}" ` +
-            `has been updated to ${status}.`,
+            `Your feedback "${
+              feedbackData.title ||
+              "Feedback"
+            }" has been updated to ${status}.`,
+
           status,
           is_read: false,
           created_time: new Date(),
           feedback_id: feedbackId,
+
           user_refdocument:
-            feedbackData.user_refdocument || null,
+            feedbackData.user_refdocument ||
+            null,
         });
 
-      res.redirect(
+      return res.redirect(
         "/feedback?success=" +
           encodeURIComponent(
             "Feedback updated and notification created successfully."
@@ -374,7 +500,7 @@ app.post(
         error
       );
 
-      res.redirect(
+      return res.redirect(
         "/feedback?error=" +
           encodeURIComponent(
             "Unable to update feedback."
@@ -400,92 +526,34 @@ app.get(
           ...doc.data(),
         }));
 
-      const totalFeedback =
-        feedbackList.length;
-
-      const pendingFeedback =
+      const pendingList =
         feedbackList.filter(
           (feedback) =>
-            String(feedback.status || "")
-              .trim()
-              .toLowerCase() === "pending"
-        ).length;
+            normalizeStatus(
+              feedback.status
+            ) === "pending"
+        );
 
-      const inProgressFeedback =
+      const inProgressList =
         feedbackList.filter(
           (feedback) =>
-            String(feedback.status || "")
-              .trim()
-              .toLowerCase() ===
-            "in progress"
-        ).length;
+            normalizeStatus(
+              feedback.status
+            ) === "in progress"
+        );
 
-      const resolvedFeedback =
+      const resolvedList =
         feedbackList.filter(
           (feedback) =>
-            String(feedback.status || "")
-              .trim()
-              .toLowerCase() === "resolved"
-        ).length;
-
-      const calculatePercentage = (
-        value
-      ) => {
-        if (totalFeedback === 0) {
-          return 0;
-        }
-
-        return Math.round(
-          (value / totalFeedback) * 100
-        );
-      };
-
-      const pendingPercentage =
-        calculatePercentage(
-          pendingFeedback
+            normalizeStatus(
+              feedback.status
+            ) === "resolved"
         );
 
-      const inProgressPercentage =
-        calculatePercentage(
-          inProgressFeedback
-        );
-
-      const resolvedPercentage =
-        calculatePercentage(
-          resolvedFeedback
-        );
-
-      const categoryCount = {};
-
-      feedbackList.forEach(
-        (feedback) => {
-          const category = String(
-            feedback.category ||
-              "Uncategorized"
-          ).trim();
-
-          categoryCount[category] =
-            (categoryCount[category] ||
-              0) + 1;
-        }
-      );
-
-      const categoryLabels =
-        Object.keys(categoryCount);
-
-      const categoryValues =
-        Object.values(categoryCount);
-
-      res.render("report", {
-        totalFeedback,
-        pendingFeedback,
-        inProgressFeedback,
-        resolvedFeedback,
-        pendingPercentage,
-        inProgressPercentage,
-        resolvedPercentage,
-        categoryLabels,
-        categoryValues,
+      return res.render("report", {
+        pendingList,
+        inProgressList,
+        resolvedList,
         currentUser: req.session.user,
       });
     } catch (error) {
@@ -494,8 +562,360 @@ app.get(
         error
       );
 
-      res.status(500).send(
+      return res.status(500).send(
         "Unable to load report page."
+      );
+    }
+  }
+);
+
+// Download complete feedback report PDF
+// Must remain before /report/:id
+app.get(
+  "/report/pdf",
+  requireHR,
+  async (req, res) => {
+    try {
+      const snapshot = await db
+        .collection("feedback")
+        .get();
+
+      const feedbackList =
+        snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+
+      const pendingList =
+        feedbackList.filter(
+          (feedback) =>
+            normalizeStatus(
+              feedback.status
+            ) === "pending"
+        );
+
+      const inProgressList =
+        feedbackList.filter(
+          (feedback) =>
+            normalizeStatus(
+              feedback.status
+            ) === "in progress"
+        );
+
+      const resolvedList =
+        feedbackList.filter(
+          (feedback) =>
+            normalizeStatus(
+              feedback.status
+            ) === "resolved"
+        );
+
+      const pdf = new PDFDocument({
+        size: "A4",
+        margin: 45,
+        bufferPages: true,
+      });
+
+      const filename =
+        `hr-feedback-report-${Date.now()}.pdf`;
+
+      res.setHeader(
+        "Content-Type",
+        "application/pdf"
+      );
+
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${filename}"`
+      );
+
+      pdf.pipe(res);
+
+      const logoPath = path.join(
+        __dirname,
+        "public",
+        "images",
+        "metropolitan-logo.jpg"
+      );
+
+      try {
+        pdf.image(logoPath, {
+          fit: [220, 70],
+          align: "center",
+        });
+      } catch (logoError) {
+        console.warn(
+          "Unable to add logo to PDF:",
+          logoError.message
+        );
+      }
+
+      pdf
+        .moveDown(0.7)
+        .font("Helvetica-Bold")
+        .fontSize(20)
+        .fillColor("#29277e")
+        .text(
+          "HR Feedback Portal",
+          {
+            align: "center",
+          }
+        );
+
+      pdf
+        .font("Helvetica")
+        .fontSize(11)
+        .fillColor("#444444")
+        .text(
+          "HR Feedback Management System",
+          {
+            align: "center",
+          }
+        );
+
+      pdf
+        .moveDown(0.4)
+        .fontSize(9)
+        .text(
+          `Generated: ${new Date().toLocaleString(
+            "en-MY",
+            {
+              dateStyle: "medium",
+              timeStyle: "short",
+            }
+          )}`,
+          {
+            align: "center",
+          }
+        );
+
+      pdf
+        .moveDown(1)
+        .font("Helvetica-Bold")
+        .fontSize(14)
+        .fillColor("#000000")
+        .text("Report Summary");
+
+      pdf
+        .moveDown(0.6)
+        .font("Helvetica")
+        .fontSize(10)
+        .text(
+          `Total Feedback: ${feedbackList.length}`
+        )
+        .text(
+          `Pending: ${pendingList.length}`
+        )
+        .text(
+          `Current / In Progress: ${inProgressList.length}`
+        )
+        .text(
+          `Completed / Resolved: ${resolvedList.length}`
+        );
+
+      const addFeedbackSection = (
+        sectionTitle,
+        records
+      ) => {
+        pdf
+          .moveDown(1.2)
+          .font("Helvetica-Bold")
+          .fontSize(14)
+          .fillColor("#29277e")
+          .text(sectionTitle);
+
+        pdf.fillColor("#000000");
+
+        if (records.length === 0) {
+          pdf
+            .moveDown(0.5)
+            .font("Helvetica-Oblique")
+            .fontSize(10)
+            .text(
+              "No feedback records available."
+            );
+
+          return;
+        }
+
+        records.forEach(
+          (feedback, index) => {
+            if (pdf.y > 670) {
+              pdf.addPage();
+            }
+
+            pdf
+              .moveDown(0.8)
+              .font("Helvetica-Bold")
+              .fontSize(11)
+              .text(
+                `${index + 1}. ${
+                  feedback.title || "-"
+                }`
+              );
+
+            pdf
+              .font("Helvetica")
+              .fontSize(9.5)
+              .text(
+                `Category: ${
+                  feedback.category ||
+                  "Uncategorized"
+                }`
+              )
+              .text(
+                `Status: ${
+                  feedback.status || "-"
+                }`
+              )
+              .text(
+                `Submitted By: ${getSubmittedBy(
+                  feedback
+                )}`
+              )
+              .text(
+                `Submitted Date: ${formatDate(
+                  feedback.created_time ||
+                  feedback.timestamp ||
+                  feedback.created_at
+                )}`
+              );
+
+            pdf
+              .moveDown(0.3)
+              .font("Helvetica-Bold")
+              .text("Description:");
+
+            pdf
+              .font("Helvetica")
+              .text(
+                feedback.message ||
+                feedback.description ||
+                "No description provided."
+              );
+
+            pdf
+              .moveDown(0.3)
+              .font("Helvetica-Bold")
+              .text("HR Response:");
+
+            pdf
+              .font("Helvetica")
+              .text(
+                feedback.hr_response ||
+                "No response yet."
+              );
+
+            pdf
+              .moveDown(0.7)
+              .strokeColor("#dddddd")
+              .moveTo(45, pdf.y)
+              .lineTo(550, pdf.y)
+              .stroke();
+          }
+        );
+      };
+
+      addFeedbackSection(
+        "Pending Feedback",
+        pendingList
+      );
+
+      addFeedbackSection(
+        "Current Feedback",
+        inProgressList
+      );
+
+      addFeedbackSection(
+        "Completed Feedback",
+        resolvedList
+      );
+
+      const pageRange =
+        pdf.bufferedPageRange();
+
+      for (
+        let pageIndex = 0;
+        pageIndex < pageRange.count;
+        pageIndex += 1
+      ) {
+        pdf.switchToPage(pageIndex);
+
+        pdf
+          .font("Helvetica")
+          .fontSize(8)
+          .fillColor("#777777")
+          .text(
+            `HR Feedback Portal | Page ${
+              pageIndex + 1
+            } of ${pageRange.count}`,
+            45,
+            800,
+            {
+              align: "center",
+              width: 505,
+            }
+          );
+      }
+
+      pdf.end();
+    } catch (error) {
+      console.error(
+        "PDF generation error:",
+        error
+      );
+
+      if (!res.headersSent) {
+        return res.status(500).send(
+          "Unable to generate feedback report PDF."
+        );
+      }
+    }
+  }
+);
+
+// Individual feedback detail page
+// Must remain after /report/pdf
+app.get(
+  "/report/:id",
+  requireHR,
+  async (req, res) => {
+    try {
+      const feedbackDocument =
+        await db
+          .collection("feedback")
+          .doc(req.params.id)
+          .get();
+
+      if (!feedbackDocument.exists) {
+        return res
+          .status(404)
+          .send(
+            "Feedback record not found."
+          );
+      }
+
+      const feedback = {
+        id: feedbackDocument.id,
+        ...feedbackDocument.data(),
+      };
+
+      return res.render(
+        "report-detail",
+        {
+          feedback,
+          currentUser:
+            req.session.user,
+        }
+      );
+    } catch (error) {
+      console.error(
+        "Feedback detail error:",
+        error
+      );
+
+      return res.status(500).send(
+        "Unable to load feedback details."
       );
     }
   }
@@ -516,15 +936,16 @@ app.get("/logout", (req, res) => {
     }
 
     res.clearCookie("connect.sid");
-    res.redirect("/login");
+
+    return res.redirect("/login");
   });
 });
 
-// Handle page not found
+// Page not found
 app.use((req, res) => {
-  res.status(404).send(
-    "Page not found."
-  );
+  return res
+    .status(404)
+    .send("Page not found.");
 });
 
 // Start server
