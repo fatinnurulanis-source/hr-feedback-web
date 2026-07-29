@@ -9,7 +9,7 @@ const { db, auth } = require("./config/firebase");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Setup EJS
+// EJS setup
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 
@@ -41,17 +41,19 @@ function requireHR(req, res, next) {
     return res.redirect("/login");
   }
 
-  if (
-    String(req.session.user.role || "")
-      .trim()
-      .toLowerCase() !== "hr"
-  ) {
+  const role = String(
+    req.session.user.role || ""
+  )
+    .trim()
+    .toLowerCase();
+
+  if (role !== "hr") {
     return res
       .status(403)
       .send("Access denied.");
   }
 
-  next();
+  return next();
 }
 
 // Normalize feedback status
@@ -61,7 +63,7 @@ function normalizeStatus(status) {
     .toLowerCase();
 }
 
-// Return employee name or Anonymous
+// Display employee name
 function getSubmittedBy(feedback) {
   if (feedback.is_anonymous === true) {
     return "Anonymous";
@@ -70,7 +72,38 @@ function getSubmittedBy(feedback) {
   return feedback.submitted_by || "-";
 }
 
-// Convert Firestore timestamp to readable date
+// Get feedback category
+function getCategory(feedback) {
+  return (
+    String(
+      feedback.category ||
+      feedback.title ||
+      "Other"
+    ).trim() || "Other"
+  );
+}
+
+// Get responsible department
+function getDepartment(feedback) {
+  return (
+    String(
+      feedback.department ||
+      feedback.responsible_department ||
+      "Other"
+    ).trim() || "Other"
+  );
+}
+
+// Get feedback details
+function getFeedbackDetails(feedback) {
+  return (
+    feedback.message ||
+    feedback.description ||
+    "No feedback details provided."
+  );
+}
+
+// Format Firestore date
 function formatDate(value) {
   if (!value) {
     return "-";
@@ -96,7 +129,33 @@ function formatDate(value) {
   });
 }
 
-// Root page
+// Get timestamp for sorting
+function getFeedbackTime(feedback) {
+  const value =
+    feedback.timestamp ||
+    feedback.created_time ||
+    feedback.created_at;
+
+  if (!value) {
+    return 0;
+  }
+
+  if (typeof value.toMillis === "function") {
+    return value.toMillis();
+  }
+
+  if (value._seconds) {
+    return value._seconds * 1000;
+  }
+
+  const parsedDate = new Date(value).getTime();
+
+  return Number.isNaN(parsedDate)
+    ? 0
+    : parsedDate;
+}
+
+// Root
 app.get("/", (req, res) => {
   if (req.session.user) {
     return res.redirect("/dashboard");
@@ -105,7 +164,7 @@ app.get("/", (req, res) => {
   return res.redirect("/login");
 });
 
-// Login page
+// Login
 app.get("/login", (req, res) => {
   if (req.session.user) {
     return res.redirect("/dashboard");
@@ -116,7 +175,7 @@ app.get("/login", (req, res) => {
   });
 });
 
-// Verify Firebase login token and create session
+// Firebase login session
 app.post("/auth/session", async (req, res) => {
   try {
     const idToken = req.body.idToken;
@@ -186,7 +245,7 @@ app.post("/auth/session", async (req, res) => {
   }
 });
 
-// HR Dashboard
+// Dashboard
 app.get(
   "/dashboard",
   requireHR,
@@ -197,9 +256,9 @@ app.get(
         .get();
 
       const feedbackList =
-        snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
+        snapshot.docs.map((document) => ({
+          id: document.id,
+          ...document.data(),
         }));
 
       const totalFeedback =
@@ -233,10 +292,7 @@ app.get(
 
       feedbackList.forEach((feedback) => {
         const category =
-          String(
-            feedback.category ||
-              "Uncategorized"
-          ).trim() || "Uncategorized";
+          getCategory(feedback);
 
         categoryCount[category] =
           (categoryCount[category] || 0) + 1;
@@ -248,39 +304,10 @@ app.get(
       const categoryValues =
         Object.values(categoryCount);
 
-      const getCreatedTime = (feedback) => {
-        const value =
-          feedback.created_time ||
-          feedback.timestamp ||
-          feedback.created_at;
-
-        if (!value) {
-          return 0;
-        }
-
-        if (
-          typeof value.toMillis ===
-          "function"
-        ) {
-          return value.toMillis();
-        }
-
-        if (value._seconds) {
-          return value._seconds * 1000;
-        }
-
-        const parsedDate =
-          new Date(value).getTime();
-
-        return Number.isNaN(parsedDate)
-          ? 0
-          : parsedDate;
-      };
-
       feedbackList.sort(
-        (a, b) =>
-          getCreatedTime(b) -
-          getCreatedTime(a)
+        (firstFeedback, secondFeedback) =>
+          getFeedbackTime(secondFeedback) -
+          getFeedbackTime(firstFeedback)
       );
 
       return res.render("dashboard", {
@@ -306,7 +333,7 @@ app.get(
   }
 );
 
-// Manage Feedback page
+// Manage Feedback
 app.get(
   "/feedback",
   requireHR,
@@ -317,9 +344,9 @@ app.get(
         .get();
 
       let feedbackList =
-        snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
+        snapshot.docs.map((document) => ({
+          id: document.id,
+          ...document.data(),
         }));
 
       const search = String(
@@ -336,29 +363,29 @@ app.get(
         feedbackList =
           feedbackList.filter(
             (feedback) => {
-              const title = String(
-                feedback.title || ""
-              ).toLowerCase();
+              const category =
+                getCategory(feedback)
+                  .toLowerCase();
 
-              const category = String(
-                feedback.category || ""
-              ).toLowerCase();
+              const department =
+                getDepartment(feedback)
+                  .toLowerCase();
 
-              const submittedBy = String(
-                feedback.submitted_by || ""
-              ).toLowerCase();
+              const details =
+                String(
+                  getFeedbackDetails(feedback)
+                ).toLowerCase();
 
-              const message = String(
-                feedback.message ||
-                  feedback.description ||
-                  ""
-              ).toLowerCase();
+              const submittedBy =
+                String(
+                  getSubmittedBy(feedback)
+                ).toLowerCase();
 
               return (
-                title.includes(search) ||
                 category.includes(search) ||
-                submittedBy.includes(search) ||
-                message.includes(search)
+                department.includes(search) ||
+                details.includes(search) ||
+                submittedBy.includes(search)
               );
             }
           );
@@ -378,6 +405,12 @@ app.get(
           );
       }
 
+      feedbackList.sort(
+        (firstFeedback, secondFeedback) =>
+          getFeedbackTime(secondFeedback) -
+          getFeedbackTime(firstFeedback)
+      );
+
       return res.render("feedback", {
         feedbackList,
 
@@ -387,12 +420,14 @@ app.get(
         errorMessage:
           req.query.error || "",
 
-        currentUser: req.session.user,
+        currentUser:
+          req.session.user,
 
         searchValue:
           req.query.search || "",
 
-        selectedStatus: statusFilter,
+        selectedStatus:
+          statusFilter,
       });
     } catch (error) {
       console.error(
@@ -407,7 +442,7 @@ app.get(
   }
 );
 
-// Update feedback and create notification
+// Update feedback
 app.post(
   "/feedback/:id/update",
   requireHR,
@@ -466,6 +501,9 @@ app.post(
         updated_at: new Date(),
       });
 
+      const category =
+        getCategory(feedbackData);
+
       await db
         .collection("notifications")
         .add({
@@ -473,10 +511,8 @@ app.post(
             "Feedback Status Updated",
 
           message:
-            `Your feedback "${
-              feedbackData.title ||
-              "Feedback"
-            }" has been updated to ${status}.`,
+            `Your ${category} feedback ` +
+            `has been updated to ${status}.`,
 
           status,
           is_read: false,
@@ -510,7 +546,7 @@ app.post(
   }
 );
 
-// Report page
+// Report
 app.get(
   "/report",
   requireHR,
@@ -521,10 +557,16 @@ app.get(
         .get();
 
       const feedbackList =
-        snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
+        snapshot.docs.map((document) => ({
+          id: document.id,
+          ...document.data(),
         }));
+
+      feedbackList.sort(
+        (firstFeedback, secondFeedback) =>
+          getFeedbackTime(secondFeedback) -
+          getFeedbackTime(firstFeedback)
+      );
 
       const pendingList =
         feedbackList.filter(
@@ -554,7 +596,8 @@ app.get(
         pendingList,
         inProgressList,
         resolvedList,
-        currentUser: req.session.user,
+        currentUser:
+          req.session.user,
       });
     } catch (error) {
       console.error(
@@ -569,8 +612,8 @@ app.get(
   }
 );
 
-// Download complete feedback report PDF
-// Must remain before /report/:id
+// Download complete report PDF
+// This route must remain before /report/:id
 app.get(
   "/report/pdf",
   requireHR,
@@ -581,10 +624,16 @@ app.get(
         .get();
 
       const feedbackList =
-        snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
+        snapshot.docs.map((document) => ({
+          id: document.id,
+          ...document.data(),
         }));
+
+      feedbackList.sort(
+        (firstFeedback, secondFeedback) =>
+          getFeedbackTime(secondFeedback) -
+          getFeedbackTime(firstFeedback)
+      );
 
       const pendingList =
         feedbackList.filter(
@@ -654,7 +703,7 @@ app.get(
         .moveDown(0.7)
         .font("Helvetica-Bold")
         .fontSize(20)
-        .fillColor("#29277e")
+        .fillColor("#0D2C8C")
         .text(
           "HR Feedback Portal",
           {
@@ -721,7 +770,7 @@ app.get(
           .moveDown(1.2)
           .font("Helvetica-Bold")
           .fontSize(14)
-          .fillColor("#29277e")
+          .fillColor("#0D2C8C")
           .text(sectionTitle);
 
         pdf.fillColor("#000000");
@@ -740,7 +789,7 @@ app.get(
 
         records.forEach(
           (feedback, index) => {
-            if (pdf.y > 670) {
+            if (pdf.y > 650) {
               pdf.addPage();
             }
 
@@ -749,23 +798,22 @@ app.get(
               .font("Helvetica-Bold")
               .fontSize(11)
               .text(
-                `${index + 1}. ${
-                  feedback.title || "-"
-                }`
+                `${index + 1}. ${getCategory(
+                  feedback
+                )}`
               );
 
             pdf
               .font("Helvetica")
               .fontSize(9.5)
               .text(
-                `Category: ${
-                  feedback.category ||
-                  "Uncategorized"
-                }`
+                `Responsible Department: ${getDepartment(
+                  feedback
+                )}`
               )
               .text(
                 `Status: ${
-                  feedback.status || "-"
+                  feedback.status || "Pending"
                 }`
               )
               .text(
@@ -775,8 +823,8 @@ app.get(
               )
               .text(
                 `Submitted Date: ${formatDate(
-                  feedback.created_time ||
                   feedback.timestamp ||
+                  feedback.created_time ||
                   feedback.created_at
                 )}`
               );
@@ -784,14 +832,14 @@ app.get(
             pdf
               .moveDown(0.3)
               .font("Helvetica-Bold")
-              .text("Description:");
+              .text("Feedback Details:");
 
             pdf
               .font("Helvetica")
               .text(
-                feedback.message ||
-                feedback.description ||
-                "No description provided."
+                getFeedbackDetails(
+                  feedback
+                )
               );
 
             pdf
@@ -874,8 +922,7 @@ app.get(
   }
 );
 
-// Individual feedback detail page
-// Must remain after /report/pdf
+// Individual feedback details
 app.get(
   "/report/:id",
   requireHR,

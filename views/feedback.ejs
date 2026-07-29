@@ -8,60 +8,61 @@
     content="width=device-width, initial-scale=1.0"
   >
 
- <title>Manage Feedback | HR Feedback Portal</title>
+  <title>Manage Feedback | HR Feedback Portal</title>
 
   <link rel="stylesheet" href="/css/style.css">
+
+  <link
+    rel="icon"
+    type="image/jpeg"
+    href="/images/metropolitan-logo.jpg"
+  >
 
   <link
     rel="stylesheet"
     href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
   >
-  <link
-  rel="icon"
-  type="image/jpeg"
-  href="/images/metropolitan-logo.jpg"
->
 </head>
 
 <body>
- <aside class="sidebar">
-  <div class="sidebar-brand">
-    <div class="sidebar-logo-box">
-      <img
-        src="/images/metropolitan-logo.jpg"
-        alt="Metropolitan College Logo"
-        class="sidebar-logo"
-      >
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-logo-box">
+        <img
+          src="/images/metropolitan-logo.jpg"
+          alt="Metropolitan College Logo"
+          class="sidebar-logo"
+        >
+      </div>
+
+      <div class="brand-text">
+        <h2>HR Feedback Portal</h2>
+        <p>HR Feedback Management System</p>
+      </div>
     </div>
 
-    <div class="brand-text">
-      <h2>HR Feedback Portal</h2>
-      <p>HR Feedback Management System</p>
+    <nav>
+      <a href="/dashboard">
+        <i class="bi bi-grid"></i>
+        Dashboard
+      </a>
+
+      <a href="/feedback" class="active">
+        <i class="bi bi-chat-left-text"></i>
+        Manage Feedback
+      </a>
+
+      <a href="/report">
+        <i class="bi bi-bar-chart"></i>
+        Report
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <p>Version 1.0.0</p>
+      <span>© 2026 HR Feedback Portal</span>
     </div>
-  </div>
-
-  <nav>
-    <a href="/dashboard">
-      <i class="bi bi-grid"></i>
-      Dashboard
-    </a>
-
-    <a href="/feedback" class="active">
-      <i class="bi bi-chat-left-text"></i>
-      Manage Feedback
-    </a>
-
-    <a href="/report">
-      <i class="bi bi-bar-chart"></i>
-      Report
-    </a>
-  </nav>
-
-  <div class="sidebar-footer">
-    <p>Version 1.0.0</p>
-    <span>© 2026 HR Feedback Portal</span>
-  </div>
-</aside>
+  </aside>
 
   <main class="main-content">
     <header class="top-header">
@@ -76,7 +77,6 @@
       <div class="user-box">
         <span>
           <i class="bi bi-person-circle"></i>
-
           <%= currentUser?.displayName || "HR Administrator" %>
         </span>
 
@@ -88,14 +88,14 @@
     </header>
 
     <% if (successMessage) { %>
-      <div class="alert success-alert">
+      <div class="success-message">
         <i class="bi bi-check-circle"></i>
         <%= successMessage %>
       </div>
     <% } %>
 
     <% if (errorMessage) { %>
-      <div class="alert error-alert">
+      <div class="error-message">
         <i class="bi bi-exclamation-circle"></i>
         <%= errorMessage %>
       </div>
@@ -107,7 +107,7 @@
         method="GET"
         class="filter-form"
       >
-        <div class="filter-group search-group">
+        <div class="filter-field search-field">
           <label for="search">
             Search Feedback
           </label>
@@ -116,90 +116,76 @@
             <i class="bi bi-search"></i>
 
             <input
-              type="search"
+              type="text"
               id="search"
               name="search"
               value="<%= searchValue %>"
-              placeholder="Search title, category or employee"
+              placeholder="Search category, department, employee or feedback details"
             >
           </div>
         </div>
 
-        <div class="filter-group">
+        <div class="filter-field status-filter-field">
           <label for="status">
             Filter Status
           </label>
 
-          <select
-            id="status"
-            name="status"
-          >
+          <select id="status" name="status">
             <option
               value="All"
-              <%= selectedStatus === "All"
-                ? "selected"
-                : "" %>
+              <%= selectedStatus === "All" ? "selected" : "" %>
             >
               All Status
             </option>
 
             <option
               value="Pending"
-              <%= selectedStatus === "Pending"
-                ? "selected"
-                : "" %>
+              <%= selectedStatus === "Pending" ? "selected" : "" %>
             >
               Pending
             </option>
 
             <option
               value="In Progress"
-              <%= selectedStatus === "In Progress"
-                ? "selected"
-                : "" %>
+              <%= selectedStatus === "In Progress" ? "selected" : "" %>
             >
               In Progress
             </option>
 
             <option
               value="Resolved"
-              <%= selectedStatus === "Resolved"
-                ? "selected"
-                : "" %>
+              <%= selectedStatus === "Resolved" ? "selected" : "" %>
             >
               Resolved
             </option>
           </select>
         </div>
 
-        <div class="filter-actions">
-          <button
-            type="submit"
-            class="filter-button"
-          >
-            <i class="bi bi-funnel"></i>
-            Apply Filter
-          </button>
+        <button
+          type="submit"
+          class="filter-button"
+        >
+          <i class="bi bi-funnel"></i>
+          Apply Filter
+        </button>
 
-          <a
-            href="/feedback"
-            class="reset-button"
-          >
-            <i class="bi bi-arrow-counterclockwise"></i>
-            Reset
-          </a>
-        </div>
+        <a
+          href="/feedback"
+          class="reset-button"
+        >
+          <i class="bi bi-arrow-counterclockwise"></i>
+          Reset
+        </a>
       </form>
     </section>
 
-    <section class="table-card">
+    <section class="table-card manage-feedback-container">
       <div class="section-heading">
         <div>
           <h2>Feedback List</h2>
 
           <p>
-            <%= feedbackList.length %>
-            feedback record(s) found.
+            <%= feedbackList.length %> feedback record(s) found.
           </p>
         </div>
       </div>
@@ -207,39 +193,54 @@
       <% if (feedbackList.length === 0) { %>
 
         <div class="empty-state">
-          <i class="bi bi-inbox empty-icon"></i>
+          <i class="bi bi-inbox"></i>
 
           <h3>No feedback found</h3>
 
           <p>
-            Try using another keyword or status filter.
+            Try changing the search keyword or status filter.
           </p>
         </div>
 
       <% } else { %>
 
-        <div class="feedback-list">
+        <div class="manage-feedback-list">
           <% feedbackList.forEach((feedback) => { %>
 
-            <% const statusClass =
-              String(feedback.status || "Pending")
-                .trim()
-                .toLowerCase()
-                .replace(/\s+/g, "-");
+            <%
+              const category =
+                feedback.category ||
+                feedback.title ||
+                "Other";
+
+              const department =
+                feedback.department ||
+                feedback.responsible_department ||
+                "Other";
+
+              const details =
+                feedback.message ||
+                feedback.description ||
+                "No feedback details provided.";
+
+              const statusClass =
+                String(feedback.status || "Pending")
+                  .trim()
+                  .toLowerCase()
+                  .replace(/\s+/g, "-");
             %>
 
-            <article class="feedback-item">
-              <div class="feedback-main">
-                <div class="feedback-title-row">
+            <article class="manage-feedback-card">
+              <div class="manage-feedback-information">
+                <div class="manage-feedback-heading">
                   <div>
-                    <h3>
-                      <%= feedback.title || "-" %>
-                    </h3>
-
-                    <p class="feedback-category">
-                      <i class="bi bi-tag"></i>
-                      <%= feedback.category || "Uncategorized" %>
+                    <p class="manage-feedback-label">
+                      Feedback Category
                     </p>
+
+                    <h3>
+                      <%= category %>
+                    </h3>
                   </div>
 
                   <span class="status <%= statusClass %>">
@@ -247,13 +248,29 @@
                   </span>
                 </div>
 
-                <p class="feedback-description">
-                  <%= feedback.message ||
-                      feedback.description ||
-                      "No description provided." %>
-                </p>
+                <div class="department-display">
+                  <span class="department-icon">
+                    <i class="bi bi-building"></i>
+                  </span>
 
-                <div class="feedback-meta">
+                  <div>
+                    <p>Responsible Department</p>
+                    <strong><%= department %></strong>
+                  </div>
+                </div>
+
+                <div class="manage-feedback-details">
+                  <h4>
+                    <i class="bi bi-chat-left-text"></i>
+                    Feedback Details
+                  </h4>
+
+                  <p>
+                    <%= details %>
+                  </p>
+                </div>
+
+                <div class="manage-feedback-meta">
                   <span>
                     <i class="bi bi-person"></i>
 
@@ -267,72 +284,83 @@
                   </span>
 
                   <span>
-                    <i class="bi bi-chat-square-text"></i>
+                    <i class="bi bi-tag"></i>
 
-                    <strong>HR Response:</strong>
-
-                    <%= feedback.hr_response ||
-                        "No response yet" %>
+                    <strong>Category:</strong>
+                    <%= category %>
                   </span>
                 </div>
               </div>
 
-              <form
-                action="/feedback/<%= feedback.id %>/update"
-                method="POST"
-                class="update-form feedback-update-form"
-              >
-                <label>
-                  Status
-
-                  <select name="status" required>
-                    <option
-                      value="Pending"
-                      <%= feedback.status === "Pending"
-                        ? "selected"
-                        : "" %>
-                    >
-                      Pending
-                    </option>
-
-                    <option
-                      value="In Progress"
-                      <%= feedback.status === "In Progress"
-                        ? "selected"
-                        : "" %>
-                    >
-                      In Progress
-                    </option>
-
-                    <option
-                      value="Resolved"
-                      <%= feedback.status === "Resolved"
-                        ? "selected"
-                        : "" %>
-                    >
-                      Resolved
-                    </option>
-                  </select>
-                </label>
-
-                <label>
-                  HR Response
-
-                  <textarea
-                    name="hr_response"
-                    rows="4"
-                    placeholder="Enter HR response"
-                  ><%= feedback.hr_response || "" %></textarea>
-                </label>
-
-                <button
-                  type="submit"
-                  class="update-button"
+              <div class="manage-feedback-control">
+                <form
+                  action="/feedback/<%= feedback.id %>/update"
+                  method="POST"
+                  class="feedback-update-form"
                 >
-                  <i class="bi bi-check-circle"></i>
-                  Update Feedback
-                </button>
-              </form>
+                  <div class="update-form-field">
+                    <label for="status-<%= feedback.id %>">
+                      Status
+                    </label>
+
+                    <select
+                      id="status-<%= feedback.id %>"
+                      name="status"
+                      required
+                    >
+                      <option
+                        value="Pending"
+                        <%= feedback.status === "Pending" ? "selected" : "" %>
+                      >
+                        Pending
+                      </option>
+
+                      <option
+                        value="In Progress"
+                        <%= feedback.status === "In Progress" ? "selected" : "" %>
+                      >
+                        In Progress
+                      </option>
+
+                      <option
+                        value="Resolved"
+                        <%= feedback.status === "Resolved" ? "selected" : "" %>
+                      >
+                        Resolved
+                      </option>
+                    </select>
+                  </div>
+
+                  <div class="update-form-field">
+                    <label for="response-<%= feedback.id %>">
+                      HR Response
+                    </label>
+
+                    <textarea
+                      id="response-<%= feedback.id %>"
+                      name="hr_response"
+                      rows="5"
+                      placeholder="Enter HR response"
+                    ><%= feedback.hr_response || "" %></textarea>
+                  </div>
+
+                  <button
+                    type="submit"
+                    class="update-button"
+                  >
+                    <i class="bi bi-check-circle"></i>
+                    Update Feedback
+                  </button>
+
+                  <a
+                    href="/report/<%= feedback.id %>"
+                    class="manage-view-detail-button"
+                  >
+                    <i class="bi bi-eye"></i>
+                    View Details
+                  </a>
+                </form>
+              </div>
             </article>
 
           <% }); %>
@@ -342,13 +370,8 @@
     </section>
 
     <footer class="system-footer">
-      <p>
-        HR Feedback System © 2026
-      </p>
-
-      <p>
-        Developed by Fatin Nurul Anis
-      </p>
+      <p>HR Feedback Portal © 2026</p>
+      <p>Developed by Fatin Nurul Anis</p>
     </footer>
   </main>
 </body>

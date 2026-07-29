@@ -8,21 +8,20 @@
     content="width=device-width, initial-scale=1.0"
   >
 
-  <title>
-    Feedback Details | HR Feedback Portal
-  </title>
+  <title>Feedback Details | HR Feedback Portal</title>
 
   <link rel="stylesheet" href="/css/style.css">
+
+  <link
+    rel="icon"
+    type="image/jpeg"
+    href="/images/metropolitan-logo.jpg"
+  >
 
   <link
     rel="stylesheet"
     href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
   >
-  <link
-  rel="icon"
-  type="image/jpeg"
-  href="/images/metropolitan-logo.jpg"
->
 </head>
 
 <body>
@@ -83,7 +82,6 @@
       <div class="user-box">
         <span>
           <i class="bi bi-person-circle"></i>
-
           <%= currentUser?.displayName || "HR Administrator" %>
         </span>
 
@@ -94,28 +92,76 @@
       </div>
     </header>
 
-    <% const statusClass =
-      String(feedback.status || "Pending")
-        .trim()
-        .toLowerCase()
-        .replace(/\s+/g, "-");
+    <%
+      const category =
+        feedback.category ||
+        feedback.title ||
+        "Other";
+
+      const department =
+        feedback.department ||
+        feedback.responsible_department ||
+        "Other";
+
+      const details =
+        feedback.message ||
+        feedback.description ||
+        "No feedback details provided.";
+
+      const statusClass =
+        String(feedback.status || "Pending")
+          .trim()
+          .toLowerCase()
+          .replace(/\s+/g, "-");
+
+      const submittedDate =
+        feedback.timestamp ||
+        feedback.created_time ||
+        feedback.created_at;
+
+      let formattedDate = "-";
+
+      if (submittedDate) {
+        let date;
+
+        if (
+          typeof submittedDate.toDate === "function"
+        ) {
+          date = submittedDate.toDate();
+        } else if (submittedDate._seconds) {
+          date = new Date(
+            submittedDate._seconds * 1000
+          );
+        } else {
+          date = new Date(submittedDate);
+        }
+
+        if (!Number.isNaN(date.getTime())) {
+          formattedDate =
+            date.toLocaleString(
+              "en-MY",
+              {
+                dateStyle: "medium",
+                timeStyle: "short"
+              }
+            );
+        }
+      }
     %>
 
     <section class="feedback-detail-card">
       <div class="feedback-detail-header">
         <div>
           <p class="feedback-detail-label">
-            Feedback Record
+            Feedback Category
           </p>
 
-          <h2>
-            <%= feedback.title || "-" %>
-          </h2>
+          <h2><%= category %></h2>
 
           <p class="feedback-category">
-            <i class="bi bi-tag"></i>
-
-            <%= feedback.category || "Uncategorized" %>
+            <i class="bi bi-building"></i>
+            Responsible Department:
+            <strong><%= department %></strong>
           </p>
         </div>
 
@@ -125,6 +171,34 @@
       </div>
 
       <div class="feedback-detail-grid">
+        <div class="feedback-detail-item">
+          <span class="detail-icon">
+            <i class="bi bi-tag"></i>
+          </span>
+
+          <div>
+            <p class="detail-label">
+              Feedback Category
+            </p>
+
+            <strong><%= category %></strong>
+          </div>
+        </div>
+
+        <div class="feedback-detail-item">
+          <span class="detail-icon">
+            <i class="bi bi-building"></i>
+          </span>
+
+          <div>
+            <p class="detail-label">
+              Responsible Department
+            </p>
+
+            <strong><%= department %></strong>
+          </div>
+        </div>
+
         <div class="feedback-detail-item">
           <span class="detail-icon">
             <i class="bi bi-person"></i>
@@ -155,62 +229,7 @@
               Submitted Date
             </p>
 
-            <strong>
-              <%
-                const submittedDate =
-                  feedback.created_time ||
-                  feedback.timestamp ||
-                  feedback.created_at;
-
-                let formattedDate = "-";
-
-                if (submittedDate) {
-                  let date;
-
-                  if (
-                    typeof submittedDate.toDate ===
-                    "function"
-                  ) {
-                    date = submittedDate.toDate();
-                  } else if (submittedDate._seconds) {
-                    date = new Date(
-                      submittedDate._seconds * 1000
-                    );
-                  } else {
-                    date = new Date(submittedDate);
-                  }
-
-                  if (!Number.isNaN(date.getTime())) {
-                    formattedDate =
-                      date.toLocaleString(
-                        "en-MY",
-                        {
-                          dateStyle: "medium",
-                          timeStyle: "short"
-                        }
-                      );
-                  }
-                }
-              %>
-
-              <%= formattedDate %>
-            </strong>
-          </div>
-        </div>
-
-        <div class="feedback-detail-item">
-          <span class="detail-icon">
-            <i class="bi bi-tag"></i>
-          </span>
-
-          <div>
-            <p class="detail-label">
-              Category
-            </p>
-
-            <strong>
-              <%= feedback.category || "Uncategorized" %>
-            </strong>
+            <strong><%= formattedDate %></strong>
           </div>
         </div>
 
@@ -234,14 +253,10 @@
       <div class="feedback-detail-section">
         <h3>
           <i class="bi bi-chat-left-text"></i>
-          Feedback Description
+          Feedback Details
         </h3>
 
-        <p>
-          <%= feedback.message ||
-              feedback.description ||
-              "No description provided." %>
-        </p>
+        <p><%= details %></p>
       </div>
 
       <div class="feedback-detail-section">
@@ -263,9 +278,7 @@
         </a>
 
         <a
-          href="/feedback?search=<%= encodeURIComponent(
-            feedback.title || ""
-          ) %>"
+          href="/feedback?search=<%= encodeURIComponent(category) %>"
           class="filter-button"
         >
           <i class="bi bi-pencil-square"></i>

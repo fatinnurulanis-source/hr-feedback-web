@@ -13,14 +13,15 @@
   <link rel="stylesheet" href="/css/style.css">
 
   <link
+    rel="icon"
+    type="image/jpeg"
+    href="/images/metropolitan-logo.jpg"
+  >
+
+  <link
     rel="stylesheet"
     href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css"
   >
-  <link
-  rel="icon"
-  type="image/jpeg"
-  href="/images/metropolitan-logo.jpg"
->
 </head>
 
 <body>
@@ -80,7 +81,6 @@
       <div class="user-box">
         <span>
           <i class="bi bi-person-circle"></i>
-
           <%= currentUser?.displayName || "HR Administrator" %>
         </span>
 
@@ -91,7 +91,6 @@
       </div>
     </header>
 
-    <!-- Summary cards -->
     <section class="summary-grid">
       <a
         href="/feedback?status=All"
@@ -99,10 +98,7 @@
       >
         <div class="summary-card-header">
           <div>
-            <p class="summary-label">
-              Total Feedback
-            </p>
-
+            <p class="summary-label">Total Feedback</p>
             <h2><%= totalFeedback %></h2>
           </div>
 
@@ -123,10 +119,7 @@
       >
         <div class="summary-card-header">
           <div>
-            <p class="summary-label">
-              Pending
-            </p>
-
+            <p class="summary-label">Pending</p>
             <h2><%= pendingFeedback %></h2>
           </div>
 
@@ -147,10 +140,7 @@
       >
         <div class="summary-card-header">
           <div>
-            <p class="summary-label">
-              In Progress
-            </p>
-
+            <p class="summary-label">In Progress</p>
             <h2><%= inProgressFeedback %></h2>
           </div>
 
@@ -171,10 +161,7 @@
       >
         <div class="summary-card-header">
           <div>
-            <p class="summary-label">
-              Resolved
-            </p>
-
+            <p class="summary-label">Resolved</p>
             <h2><%= resolvedFeedback %></h2>
           </div>
 
@@ -190,7 +177,6 @@
       </a>
     </section>
 
-    <!-- Report data moved to dashboard -->
     <section class="dashboard-analytics-grid">
       <div class="report-panel dashboard-chart-panel">
         <div class="report-heading">
@@ -217,7 +203,7 @@
           </h2>
 
           <p>
-            Total feedback submissions for each category.
+            Total submissions for each feedback category.
           </p>
         </div>
 
@@ -227,7 +213,6 @@
       </div>
     </section>
 
-    <!-- Recent feedback + side panels -->
     <section class="dashboard-layout">
       <div class="table-card">
         <div class="section-heading">
@@ -250,13 +235,8 @@
         <% if (feedbackList.length === 0) { %>
 
           <div class="empty-state">
-            <i class="bi bi-inbox empty-icon"></i>
-
             <h3>No feedback available</h3>
-
-            <p>
-              New employee feedback will appear here.
-            </p>
+            <p>New employee feedback will appear here.</p>
           </div>
 
         <% } else { %>
@@ -264,24 +244,38 @@
           <div class="recent-feedback-list">
             <% feedbackList.slice(0, 5).forEach((feedback) => { %>
 
-              <% const statusClass =
-                String(feedback.status || "Pending")
-                  .trim()
-                  .toLowerCase()
-                  .replace(/\s+/g, "-");
+              <%
+                const category =
+                  feedback.category ||
+                  feedback.title ||
+                  "Other";
+
+                const department =
+                  feedback.department ||
+                  feedback.responsible_department ||
+                  "Other";
+
+                const details =
+                  feedback.message ||
+                  feedback.description ||
+                  "No feedback details provided.";
+
+                const statusClass =
+                  String(feedback.status || "Pending")
+                    .trim()
+                    .toLowerCase()
+                    .replace(/\s+/g, "-");
               %>
 
               <article class="recent-feedback-item">
                 <div class="recent-feedback-content">
                   <div class="recent-feedback-title-row">
                     <div>
-                      <h3>
-                        <%= feedback.title || "-" %>
-                      </h3>
+                      <h3><%= category %></h3>
 
                       <p class="feedback-category">
-                        <i class="bi bi-tag"></i>
-                        <%= feedback.category || "Uncategorized" %>
+                        <i class="bi bi-building"></i>
+                        <%= department %>
                       </p>
                     </div>
 
@@ -291,9 +285,7 @@
                   </div>
 
                   <p class="feedback-description">
-                    <%= feedback.message ||
-                        feedback.description ||
-                        "No description provided." %>
+                    <%= details %>
                   </p>
 
                   <div class="feedback-meta">
@@ -309,16 +301,16 @@
 
                     <span>
                       <i class="bi bi-tag"></i>
-                      <%= feedback.category || "Uncategorized" %>
+                      <%= category %>
                     </span>
                   </div>
                 </div>
 
                 <a
-                  href="/feedback?search=<%= encodeURIComponent(feedback.title || "") %>"
+                  href="/report/<%= feedback.id %>"
                   class="small-button"
                 >
-                  Manage
+                  View Details
                   <i class="bi bi-arrow-right"></i>
                 </a>
               </article>
@@ -330,7 +322,6 @@
       </div>
 
       <aside class="dashboard-side-panel">
-        <!-- Quick actions first -->
         <div class="report-panel quick-action-panel">
           <div class="report-heading">
             <h2>
@@ -338,27 +329,17 @@
               Quick Actions
             </h2>
 
-            <p>
-              Access important HR functions.
-            </p>
+            <p>Access important HR functions.</p>
           </div>
 
           <div class="quick-action-list">
-            <a
-              href="/feedback"
-              class="quick-action-link"
-            >
+            <a href="/feedback" class="quick-action-link">
               <i class="bi bi-chat-left-text"></i>
-
               <span>Manage Feedback</span>
             </a>
 
-            <a
-              href="/report"
-              class="quick-action-link"
-            >
+            <a href="/report" class="quick-action-link">
               <i class="bi bi-file-earmark-bar-graph"></i>
-
               <span>View Feedback Report</span>
             </a>
 
@@ -367,7 +348,6 @@
               class="quick-action-link"
             >
               <i class="bi bi-hourglass-split"></i>
-
               <span>Review Pending</span>
             </a>
 
@@ -376,13 +356,11 @@
               class="quick-action-link"
             >
               <i class="bi bi-arrow-repeat"></i>
-
               <span>Review Current</span>
             </a>
           </div>
         </div>
 
-        <!-- System overview -->
         <div class="report-panel dashboard-summary-panel">
           <div class="report-heading">
             <h2>
@@ -390,9 +368,7 @@
               System Overview
             </h2>
 
-            <p>
-              Current HR feedback workflow.
-            </p>
+            <p>Current HR feedback workflow.</p>
           </div>
 
           <div class="overview-list">
@@ -403,9 +379,8 @@
 
               <div>
                 <h3>Employee Mobile App</h3>
-
                 <p>
-                  Employees submit feedback through the FlutterFlow application.
+                  Employees submit feedback through FlutterFlow.
                 </p>
               </div>
             </div>
@@ -417,9 +392,8 @@
 
               <div>
                 <h3>Firebase Database</h3>
-
                 <p>
-                  Feedback and notifications are stored centrally in Firestore.
+                  Feedback and notifications are stored centrally.
                 </p>
               </div>
             </div>
@@ -431,9 +405,8 @@
 
               <div>
                 <h3>HR Web Portal</h3>
-
                 <p>
-                  HR reviews, responds to and updates employee feedback.
+                  HR reviews, responds to and updates feedback.
                 </p>
               </div>
             </div>
@@ -443,13 +416,8 @@
     </section>
 
     <footer class="system-footer">
-      <p>
-        HR Feedback Portal © 2026
-      </p>
-
-      <p>
-        Developed by Fatin Nurul Anis
-      </p>
+      <p>HR Feedback Portal © 2026</p>
+      <p>Developed by Fatin Nurul Anis</p>
     </footer>
   </main>
 
@@ -460,108 +428,103 @@
       pending: pendingFeedback,
       inProgress: inProgressFeedback,
       resolved: resolvedFeedback,
-      categoryLabels: categoryLabels,
-      categoryValues: categoryValues
+      categoryLabels,
+      categoryValues
     }) %>
   </script>
 
   <script>
-    const chartDataElement =
+    const chartData = JSON.parse(
       document.getElementById(
         "dashboard-chart-data"
-      );
-
-    const chartData = JSON.parse(
-      chartDataElement.textContent
+      ).textContent
     );
 
-    const statusCanvas =
-      document.getElementById("statusChart");
+    new Chart(
+      document.getElementById("statusChart"),
+      {
+        type: "doughnut",
 
-    new Chart(statusCanvas, {
-      type: "doughnut",
+        data: {
+          labels: [
+            "Pending",
+            "In Progress",
+            "Resolved"
+          ],
 
-      data: {
-        labels: [
-          "Pending",
-          "In Progress",
-          "Resolved"
-        ],
+          datasets: [
+            {
+              data: [
+                chartData.pending,
+                chartData.inProgress,
+                chartData.resolved
+              ],
 
-        datasets: [
-          {
-            data: [
-              chartData.pending,
-              chartData.inProgress,
-              chartData.resolved
-            ],
+              backgroundColor: [
+                "#F59E0B",
+                "#2563EB",
+                "#22A55A"
+              ],
 
-            backgroundColor: [
-              "#f4c95d",
-              "#6ca6e8",
-              "#72c48d"
-            ],
-
-            borderWidth: 0
-          }
-        ]
-      },
-
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        cutout: "62%",
-
-        plugins: {
-          legend: {
-            position: "bottom"
-          }
-        }
-      }
-    });
-
-    const categoryCanvas =
-      document.getElementById(
-        "categoryChart"
-      );
-
-    new Chart(categoryCanvas, {
-      type: "bar",
-
-      data: {
-        labels: chartData.categoryLabels,
-
-        datasets: [
-          {
-            label: "Feedback",
-            data: chartData.categoryValues,
-            backgroundColor: "#3d3b8e",
-            borderRadius: 7
-          }
-        ]
-      },
-
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-
-        scales: {
-          y: {
-            beginAtZero: true,
-
-            ticks: {
-              precision: 0
+              borderWidth: 0
             }
-          }
+          ]
         },
 
-        plugins: {
-          legend: {
-            display: false
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: "62%",
+
+          plugins: {
+            legend: {
+              position: "bottom"
+            }
           }
         }
       }
-    });
+    );
+
+    new Chart(
+      document.getElementById("categoryChart"),
+      {
+        type: "bar",
+
+        data: {
+          labels: chartData.categoryLabels,
+
+          datasets: [
+            {
+              label: "Feedback",
+              data: chartData.categoryValues,
+              backgroundColor: "#0D2C8C",
+              borderRadius: 7
+            }
+          ]
+        },
+
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+
+          scales: {
+            y: {
+              beginAtZero: true,
+
+              ticks: {
+                precision: 0
+              }
+            }
+          },
+
+          plugins: {
+            legend: {
+              display: false
+            }
+          }
+        }
+      }
+    );
   </script>
 </body>
 </html>
